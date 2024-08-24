@@ -17,7 +17,7 @@ def get_sp500_data():
     company_symbol_dict = dict(zip(sp500_table['Security'], sp500_table['Symbol']))
     return company_symbol_dict
 
-st.title('Stock Predictor')
+st.title('Fortune Teller')
 company_symbol_dict = get_sp500_data()
 company_name = st.selectbox('Select the company name',list(company_symbol_dict.keys()))
 selected_symbol = company_symbol_dict[company_name]
@@ -241,6 +241,86 @@ plt.ylabel("Stock Price")
 plt.show()
 st.pyplot(plt)
 
-# Show RMSE values
-#st.write(f"Training RMSE: {train_rmse}")
-#st.write(f"Testing RMSE: {test_rmse}")
+df3=df1.tolist()
+df3.extend(lst_output)
+plt.figure(figsize=(12, 6))
+plt.plot(df3[1200:])
+plt.title('Recent and Predicted Stock Prices (Scaled)')
+plt.xlabel('Time')
+plt.ylabel('Scaled Price')
+st.pyplot(plt.gcf())
+
+df3=scaler.inverse_transform(df3).tolist()
+plt.figure(figsize=(12, 6))
+plt.plot(df3)
+plt.title('Recent and Predicted Stock Prices (Original Scale)')
+plt.xlabel('Time')
+plt.ylabel('Price')
+st.pyplot(plt.gcf())
+
+
+
+# Feature Engineering
+data['Daily Return'] = data['Close'].pct_change()
+data['Moving Average'] = data['Close'].rolling(window=20).mean()
+data.dropna(inplace=True)
+
+# Define features and target
+features = ['Daily Return', 'Moving Average']
+data['Target'] = np.where(data['Close'].shift(-1) > data['Close'], 1, 0)  # 1: Buy, 0: Sell
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+# Split data into training and testing sets
+X = data[features]
+y = data['Target']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+
+# Feature scaling
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Train a logistic regression model
+model = LogisticRegression()
+model.fit(X_train_scaled, y_train)
+
+# Predict on the test set and evaluate
+y_pred = model.predict(X_test_scaled)
+
+# Preparing to predict for the future
+# Use the most recent data to generate features for future prediction
+recent_data = data[-20:].copy()  # Make sure to copy to avoid warnings
+
+# Generate features for prediction
+recent_data['Daily Return'] = recent_data['Close'].pct_change()
+recent_data['Moving Average'] = recent_data['Close'].rolling(window=20).mean()
+recent_data.dropna(inplace=True)
+
+# Display recent data and calculated features
+st.subheader("Most Recent Data")
+st.dataframe(recent_data.tail(10))
+
+# Use only the most recent row for future prediction, keeping it in DataFrame format
+latest_features = recent_data[features].iloc[-1:]
+
+# Show the feature values before scaling
+st.subheader("Feature Values for Prediction (Unscaled)")
+st.dataframe(latest_features)
+
+# Predict using the trained model
+with st.spinner('Predicting the future... Please wait...'):
+    # Predict using the trained model
+    latest_features_scaled = scaler.transform(latest_features)
+    future_prediction = model.predict(latest_features_scaled)
+
+# Interpret the prediction
+action = "Buy" if future_prediction[0] == 1 else "Sell"
+
+# Show scaled feature values and prediction
+st.subheader("Feature Values for Prediction (Scaled)")
+st.dataframe(pd.DataFrame(latest_features_scaled, columns=features))
+
+st.markdown(f"## Future prediction for the next day: **{action}**")
