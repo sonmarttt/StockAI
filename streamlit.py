@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 #%matplotlib inline
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from scipy import stats
 from datetime import datetime, timedelta
 from sklearn.preprocessing import MinMaxScaler
@@ -90,6 +91,8 @@ elif plot_type=="Scatter Plot":
 plt.xlabel('Date')
 plt.ylabel(feature)
 plt.xticks(rotation=45)
+#plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Added date formatter
+#plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
 plt.tight_layout()
 st.pyplot(plt)
 
@@ -187,29 +190,41 @@ plt.figure(figsize=(12, 6))
 
 # Plot training predictions
 look_back = 100
-trainPredictPlot = numpy.empty_like(df1)
+
+# Create a date range for the past 5 years
+
+#start_date = data.index[-1] - pd.DateOffset(years=5)
+#date_range_full = pd.date_range(start=start, periods=len(df1), freq='D')
+#date_range_full=
+# Plot training predictions
+trainPredictPlot = np.empty_like(df1)
 trainPredictPlot[:, :] = np.nan
 trainPredictPlot[look_back:len(train_predict) + look_back, :] = train_predict
 
 # Plot testing predictions
-testPredictPlot = numpy.empty_like(df1)
-testPredictPlot[:, :] = numpy.nan
+testPredictPlot = np.empty_like(df1)
+testPredictPlot[:, :] = np.nan
 testPredictPlot[len(train_predict) + (look_back * 2) + 1:len(df1) - 1, :] = test_predict
 
-plt.plot(scaler.inverse_transform(df1), color='blue', label='Actual Prices')
-plt.plot(trainPredictPlot, color='orange', label='Training Predictions')
+# Plot actual and predicted prices
+plt.figure(figsize=(12, 6))
+plt.plot( scaler.inverse_transform(df1), color='blue', label='Actual Prices')
+plt.plot( trainPredictPlot, color='orange', label='Training Predictions')
 plt.plot(testPredictPlot, color='red', label='Testing Predictions')
-
-plt.xlabel('Time')
+plt.xticks(rotation=45)
+plt.xlabel('Past 5 years')
 plt.ylabel('Stock Price')
 plt.legend()
+#plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))  # Show year and month
+#plt.gca().xaxis.set_major_locator(mdates.YearLocator())  # Show every year
+plt.tight_layout()
 st.pyplot(plt)
 
 
 
 # Future predictions
 st.subheader("Future Predictions for the Next 30 Days")
-x_input=test_data[340:].reshape(1,0-1)
+x_input=test_data[340:].reshape(1,-1)
 
 temp_input = list(x_input)
 temp_input = temp_input[0].tolist()
@@ -242,34 +257,57 @@ while (i < 30):
         i = i + 1
 
 # Plot future predictions
-day_new = np.arange(1, 101)
-day_pred = np.arange(101, 131)
+df3 = df1.tolist()
+df3.extend(lst_output)
 
-import matplotlib.pyplot as plt
+# Create date ranges
+last_date = data.index[-1]
+date_range_past = pd.date_range(end=last_date, periods=100, freq='D')
+date_range_future = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=30, freq='D')
+# Plot future stock price predictions
 plt.figure(figsize=(12, 6))
-plt.plot(day_new, scaler.inverse_transform(df1[-100:]))
-plt.plot(day_pred, scaler.inverse_transform(lst_output))
+plt.plot(date_range_past, scaler.inverse_transform(df1[-100:]), label='Past Data')
+plt.plot(date_range_future, scaler.inverse_transform(lst_output), label='Predicted Data')
 plt.title("Future Stock Price Predictions for the Next 30 Days")
-plt.xlabel("Day")
+plt.xlabel("Date")
 plt.ylabel("Stock Price")
-plt.show()
+plt.legend()
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))  # Show only month and year
+plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # Show every month
+plt.tight_layout()
 st.pyplot(plt)
 
-df3=df1.tolist()
-df3.extend(lst_output)
+
+# Create a date range for the x-axis starting from the last date in the original data
+#date_range_full = pd.date_range(start=data.index[-1] - pd.Timedelta(days=len(df1) - 1), periods=len(df3), freq='D')
+#date_range_full=pd.date_range(end=last_date + pd.Timedelta(days=1), periods=130, freq='D')
+date_range = pd.date_range(start=data.index[-1], periods=len(df3[1200:]), freq='D')
+# Plot recent and predicted stock prices (scaled)
 plt.figure(figsize=(12, 6))
-plt.plot(df3[1200:])
+plt.plot(df3[1200:])  # Ensure the lengths match
 plt.title('Recent and Predicted Stock Prices (Scaled)')
-plt.xlabel('Time')
+plt.xlabel('Prediction for the upcoming month')
 plt.ylabel('Scaled Price')
+#plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))  # Show only month and year
+#plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # Show every month
+plt.tight_layout()
 st.pyplot(plt.gcf())
 
-df3=scaler.inverse_transform(df3).tolist()
+# Inverse transform the scaled data
+df3_original = scaler.inverse_transform(np.array(df3).reshape(-1, 1)).flatten()
+
+# Create a full date range for the original scale plot
+date_range_full = pd.date_range(start=data.index[0], periods=len(df3), freq='D')
+
 plt.figure(figsize=(12, 6))
-plt.plot(df3)
+plt.plot( df3_original)
 plt.title('Recent and Predicted Stock Prices (Original Scale)')
-plt.xlabel('Time')
+plt.xlabel('Past 5 years with the prediction')
 plt.ylabel('Price')
+#plt.xticks(rotation=45)
+#plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y'))  # Added date formatter
+#plt.gca().xaxis.set_major_locator(mdates.MonthLocator())  # Added month locator
+plt.tight_layout()
 st.pyplot(plt.gcf())
 
 
