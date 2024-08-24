@@ -7,7 +7,9 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from datetime import datetime, timedelta
 from sklearn.preprocessing import MinMaxScaler
-
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import LSTM
 
 @st.cache_data
 def get_sp500_data():
@@ -17,15 +19,46 @@ def get_sp500_data():
     company_symbol_dict = dict(zip(sp500_table['Security'], sp500_table['Symbol']))
     return company_symbol_dict
 
+@st.cache_data
+def download_stock_data(ticker, start, end):
+    return yf.download(ticker, start=start, end=end, actions=False)
+
+@st.cache_data
+def train_lstm_model(train_data, time_step):
+    X_train, y_train = create_dataset(train_data, time_step)
+    X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
+
+    model = Sequential()
+    model.add(LSTM(50, return_sequences=True, input_shape=(100, 1)))
+    model.add(LSTM(50, return_sequences=True))
+    model.add(LSTM(50))
+    model.add(Dense(1))
+    model.compile(loss='mean_squared_error', optimizer='adam')
+    model.fit(X_train, y_train, epochs=50, batch_size=64, verbose=0)
+    return model
+
+@st.cache_data
+def get_data_for_year(symbol, year):
+    start_date = datetime(year, 1, 1)
+    end_date = datetime(year + 1, 1, 1)
+    return yf.download(tickers=symbol, start=start_date, end=end_date)
+
+@st.cache_data
+def download_stock_data(ticker, start, end):
+    return yf.download(ticker, start=start, end=end, actions=False)
+
+
 st.title('Fortune Teller')
 company_symbol_dict = get_sp500_data()
 company_name = st.selectbox('Select the company name',list(company_symbol_dict.keys()))
 selected_symbol = company_symbol_dict[company_name]
 
+
+
 end = datetime.now()
 start = datetime(end.year - 5, end.month, end.day)
+data = download_stock_data(selected_symbol, start, end)
 
-data = yf.download(tickers=selected_symbol,  start=start, end=end,actions=False)
 
 st.write(f"Showing data for {company_name} ({selected_symbol})")
 st.write(data.tail())
@@ -58,14 +91,6 @@ plt.xlabel('Date')
 plt.ylabel(feature)
 plt.xticks(rotation=45)
 plt.tight_layout()
-st.pyplot(plt)
-
-data_cleaned['Daily Return']=data_cleaned['Close'].pct_change()
-plt.figure(figsize=(12, 9))
-plt.hist(data_cleaned['Daily Return'].dropna(), bins=50)
-plt.xlabel('Daily Return')
-plt.ylabel('Counts')
-plt.title(f'{company_name} Daily Return Histogram')
 st.pyplot(plt)
 
 selected_year = st.selectbox("Select the year:", list(range(2018, datetime.now().year + 1)))
@@ -117,6 +142,7 @@ train_data, test_data = df1[0:training_size, :], df1[training_size:len(df1), :1]
 
 # Function to create a dataset matrix
 import numpy
+@st.cache_data
 def create_dataset(dataset, time_step=1):
     dataX, dataY = [], []
     for i in range(len(dataset)-time_step-1):
@@ -127,6 +153,9 @@ def create_dataset(dataset, time_step=1):
 
 # Reshape into X=t,t+1,t+2,t+3 and Y=t+4
 time_step = 100
+with st.spinner('Training the LSTM model, please wait...'):
+ model = train_lstm_model(train_data, time_step)
+
 X_train, y_train = create_dataset(train_data, time_step)
 X_test, ytest = create_dataset(test_data, time_step)
 
@@ -134,21 +163,6 @@ X_test, ytest = create_dataset(test_data, time_step)
 X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
 X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], 1)
 
-
-# LSTM model
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import LSTM
-model = Sequential()
-model.add(LSTM(50, return_sequences=True, input_shape=(100, 1)))
-model.add(LSTM(50, return_sequences=True))
-model.add(LSTM(50))
-model.add(Dense(1))
-model.compile(loss='mean_squared_error', optimizer='adam')
-
-# Display loading message during training
-with st.spinner('Training the LSTM model, please wait...'):
-    model.fit(X_train, y_train, validation_data=(X_test, ytest), epochs=100, batch_size=64, verbose=1)
 
 
 import tensorflow as tf
