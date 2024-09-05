@@ -120,12 +120,6 @@ plt.ylabel('Counts')
 plt.title(f'Daily Returns for {company_name} in {selected_year}')
 st.pyplot(plt)
 
-
-
-
-
-
-
 # Prepare the data for training
 
 
@@ -190,13 +184,6 @@ plt.figure(figsize=(12, 6))
 
 # Plot training predictions
 look_back = 100
-
-# Create a date range for the past 5 years
-
-#start_date = data.index[-1] - pd.DateOffset(years=5)
-#date_range_full = pd.date_range(start=start, periods=len(df1), freq='D')
-#date_range_full=
-# Plot training predictions
 trainPredictPlot = np.empty_like(df1)
 trainPredictPlot[:, :] = np.nan
 trainPredictPlot[look_back:len(train_predict) + look_back, :] = train_predict
@@ -279,8 +266,6 @@ st.pyplot(plt)
 
 
 # Create a date range for the x-axis starting from the last date in the original data
-#date_range_full = pd.date_range(start=data.index[-1] - pd.Timedelta(days=len(df1) - 1), periods=len(df3), freq='D')
-#date_range_full=pd.date_range(end=last_date + pd.Timedelta(days=1), periods=130, freq='D')
 date_range = pd.date_range(start=data.index[-1], periods=len(df3[1200:]), freq='D')
 # Plot recent and predicted stock prices (scaled)
 plt.figure(figsize=(12, 6))
@@ -288,8 +273,6 @@ plt.plot(df3[1200:])  # Ensure the lengths match
 plt.title('Recent and Predicted Stock Prices (Scaled)')
 plt.xlabel('Prediction for the upcoming month')
 plt.ylabel('Scaled Price')
-#plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))  # Show only month and year
-#plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # Show every month
 plt.tight_layout()
 st.pyplot(plt.gcf())
 
@@ -304,9 +287,6 @@ plt.plot( df3_original)
 plt.title('Recent and Predicted Stock Prices (Original Scale)')
 plt.xlabel('Past 5 years with the prediction')
 plt.ylabel('Price')
-#plt.xticks(rotation=45)
-#plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y'))  # Added date formatter
-#plt.gca().xaxis.set_major_locator(mdates.MonthLocator())  # Added month locator
 plt.tight_layout()
 st.pyplot(plt.gcf())
 
